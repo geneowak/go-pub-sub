@@ -25,11 +25,20 @@ func main() {
 	defer conn.Close()
 	fmt.Println("Successfully connnected to rabbitmq server.")
 
-	channel, err := conn.Channel()
+	publishChan, err := conn.Channel()
 	if err != nil {
 		log.Fatal("Failed to create channel: ", err)
 	}
-	pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+	err = pubsub.PublishJSON(
+		publishChan,
+		routing.ExchangePerilDirect,
+		routing.PauseKey,
+		routing.PlayingState{IsPaused: true},
+	)
+
+	if err != nil {
+		log.Println("Failed to publish: %w", err)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
