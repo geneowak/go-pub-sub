@@ -33,7 +33,7 @@ func main() {
 		routing.ExchangePerilDirect,
 		queueName,
 		routing.PauseKey,
-		pubsub.Transient,
+		pubsub.SimpleQueueTransient,
 		handlerPause(gs),
 	)
 	if err != nil {

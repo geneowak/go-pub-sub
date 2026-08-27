@@ -28,7 +28,7 @@ func main() {
 		routing.ExchangePerilTopic,
 		queueName,
 		routingKey,
-		pubsub.Durable,
+		pubsub.SimpleQueueDurable,
 	)
 	if err != nil {
 		log.Fatal("Failed to declare and bind to game_logs queue", err)
