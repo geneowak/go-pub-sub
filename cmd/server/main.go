@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/geneowak/go-pub-sub/internal/gamelogic"
 	"github.com/geneowak/go-pub-sub/internal/pubsub"
@@ -41,10 +40,11 @@ func main() {
 
 	for {
 		inputs := gamelogic.GetInput()
-		if inputs == nil {
+		if len(inputs) == 0 {
 			continue
 		}
-		if inputs[0] == "pause" {
+		switch inputs[0] {
+		case "pause":
 			fmt.Println("Game has been paused...")
 			err = pubsub.PublishJSON(
 				publishChan,
@@ -56,9 +56,7 @@ func main() {
 			if err != nil {
 				fmt.Println("Failed to publish: %w", err)
 			}
-			continue
-		}
-		if inputs[0] == "resume" {
+		case "resume":
 			fmt.Println("Game is being resumed...")
 			err = pubsub.PublishJSON(
 				publishChan,
@@ -70,14 +68,11 @@ func main() {
 			if err != nil {
 				fmt.Println("Failed to publish: %w", err)
 			}
-			continue
-		}
-		if inputs[0] == "quit" {
-			break
+		case "quit":
+			log.Println("See you later...")
+			return
+		default:
+			fmt.Println("unknown command")
 		}
 	}
-
-	fmt.Println("Shutting down...")
-	time.Sleep(time.Second)
-	fmt.Println("Program exited.")
 }
