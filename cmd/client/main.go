@@ -27,7 +27,7 @@ func main() {
 
 	gs := gamelogic.NewGameState(username)
 
-	queueName := fmt.Sprintf("%s.%s", routing.PauseKey, username)
+	queueName := fmt.Sprintf("%s.%s", routing.PauseKey, gs.GetUsername())
 	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilDirect,

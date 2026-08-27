@@ -21,11 +21,11 @@ func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	})
 }
 
-type SimpleQueueType string
+type SimpleQueueType int
 
 const (
-	Transient SimpleQueueType = "transient"
-	Durable   SimpleQueueType = "durable"
+	SimpleQueueTransient SimpleQueueType = iota
+	SimpleQueueDurable
 )
 
 func SubscribeJSON[T any](
@@ -36,7 +36,7 @@ func SubscribeJSON[T any](
 	queueType SimpleQueueType, // an enum to represent "durable" or "transient"
 	handler func(T),
 ) error {
-	channel, _, err := DeclareAndBind(
+	ch, queue, err := DeclareAndBind(
 		conn,
 		exchange,
 		queueName,
@@ -47,20 +47,21 @@ func SubscribeJSON[T any](
 		return fmt.Errorf("Failed to declare and bind: %w", err)
 	}
 
-	delivery, err := channel.Consume(queueName, "", false, false, false, false, nil)
+	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("Failed to setup consumer: %w", err)
 	}
 	go func() {
-		for val := range delivery {
+		defer ch.Close()
+		for msg := range msgs {
 			var body T
-			err := json.Unmarshal(val.Body, &body)
+			err := json.Unmarshal(msg.Body, &body)
 			if err != nil {
 				log.Println("Failed to Unmarshal: ", err)
 				continue
 			}
 			handler(body)
-			val.Ack(false)
+			msg.Ack(false)
 		}
 	}()
 
@@ -81,12 +82,12 @@ func DeclareAndBind(
 	}
 
 	queue, err := channel.QueueDeclare(
-		queueName,
-		queueType == Durable,
-		queueType == Transient,
-		queueType == Transient,
-		false,
-		nil,
+		queueName,                       // name
+		queueType == SimpleQueueDurable, // durable
+		queueType != SimpleQueueDurable, // delete when unused
+		queueType != SimpleQueueDurable, // exclusive
+		false,                           // no-wait
+		nil,                             // args
 	)
 	if err != nil {
 		return nil, amqp.Queue{}, err
