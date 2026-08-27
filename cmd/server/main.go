@@ -1,14 +1,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
+	"github.com/geneowak/go-pub-sub/internal/gamelogic"
 	"github.com/geneowak/go-pub-sub/internal/pubsub"
 	"github.com/geneowak/go-pub-sub/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -40,10 +37,45 @@ func main() {
 		log.Println("Failed to publish: %w", err)
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	gamelogic.PrintServerHelp()
 
-	<-ctx.Done()
+	for {
+		inputs := gamelogic.GetInput()
+		if inputs == nil {
+			continue
+		}
+		if inputs[0] == "pause" {
+			fmt.Println("Game has been paused...")
+			err = pubsub.PublishJSON(
+				publishChan,
+				routing.ExchangePerilDirect,
+				routing.PauseKey,
+				routing.PlayingState{IsPaused: true},
+			)
+
+			if err != nil {
+				fmt.Println("Failed to publish: %w", err)
+			}
+			continue
+		}
+		if inputs[0] == "resume" {
+			fmt.Println("Game is being resumed...")
+			err = pubsub.PublishJSON(
+				publishChan,
+				routing.ExchangePerilDirect,
+				routing.PauseKey,
+				routing.PlayingState{IsPaused: false},
+			)
+
+			if err != nil {
+				fmt.Println("Failed to publish: %w", err)
+			}
+			continue
+		}
+		if inputs[0] == "quit" {
+			break
+		}
+	}
 
 	fmt.Println("Shutting down...")
 	time.Sleep(time.Second)
