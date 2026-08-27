@@ -19,7 +19,20 @@ func main() {
 		log.Fatal("Unable to connnect to rabbitmq server", err)
 	}
 	defer conn.Close()
+
 	fmt.Println("Successfully connnected to rabbitmq server.")
+	queueName := "game_logs"
+	routingKey := "game_logs.*"
+	_, _, err = pubsub.DeclareAndBind(
+		conn,
+		routing.ExchangePerilTopic,
+		queueName,
+		routingKey,
+		pubsub.Durable,
+	)
+	if err != nil {
+		log.Fatal("Failed to declare and bind to game_logs queue", err)
+	}
 
 	publishChan, err := conn.Channel()
 	if err != nil {

@@ -49,13 +49,13 @@ func main() {
 			err := gs.CommandSpawn(inputs)
 			if err != nil {
 				log.Println("Error spawning: ", err)
-				break
+				continue
 			}
 		case "move":
 			_, err := gs.CommandMove(inputs)
 			if err != nil {
 				log.Println("Error moving: ", err)
-				break
+				continue
 			}
 		case "status":
 			gs.CommandStatus()
