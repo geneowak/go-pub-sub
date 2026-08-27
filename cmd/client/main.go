@@ -25,19 +25,20 @@ func main() {
 		log.Fatal(err)
 	}
 
+	gs := gamelogic.NewGameState(username)
+
 	queueName := fmt.Sprintf("%s.%s", routing.PauseKey, username)
-	_, _, err = pubsub.DeclareAndBind(
+	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilDirect,
 		queueName,
 		routing.PauseKey,
 		pubsub.Transient,
+		handlerPause(gs),
 	)
 	if err != nil {
 		log.Fatal("Failed to declare and bind", err)
 	}
-
-	gs := gamelogic.NewGameState(username)
 
 	for {
 		inputs := gamelogic.GetInput()

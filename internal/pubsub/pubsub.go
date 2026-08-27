@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -26,6 +27,45 @@ const (
 	Transient SimpleQueueType = "transient"
 	Durable   SimpleQueueType = "durable"
 )
+
+func SubscribeJSON[T any](
+	conn *amqp.Connection,
+	exchange,
+	queueName,
+	key string,
+	queueType SimpleQueueType, // an enum to represent "durable" or "transient"
+	handler func(T),
+) error {
+	channel, _, err := DeclareAndBind(
+		conn,
+		exchange,
+		queueName,
+		key,
+		queueType,
+	)
+	if err != nil {
+		return fmt.Errorf("Failed to declare and bind: %w", err)
+	}
+
+	delivery, err := channel.Consume(queueName, "", false, false, false, false, nil)
+	if err != nil {
+		return fmt.Errorf("Failed to setup consumer: %w", err)
+	}
+	go func() {
+		for val := range delivery {
+			var body T
+			err := json.Unmarshal(val.Body, &body)
+			if err != nil {
+				log.Println("Failed to Unmarshal: ", err)
+				continue
+			}
+			handler(body)
+			val.Ack(false)
+		}
+	}()
+
+	return nil
+}
 
 func DeclareAndBind(
 	conn *amqp.Connection,
