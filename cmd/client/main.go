@@ -1,13 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
 	"github.com/geneowak/go-pub-sub/internal/gamelogic"
 	"github.com/geneowak/go-pub-sub/internal/pubsub"
@@ -30,18 +25,49 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, _, err = pubsub.DeclareAndBind(conn, routing.ExchangePerilDirect, fmt.Sprintf("%s.%s", routing.PauseKey, username), routing.PauseKey, pubsub.Transient)
+	queueName := fmt.Sprintf("%s.%s", routing.PauseKey, username)
+	_, _, err = pubsub.DeclareAndBind(
+		conn,
+		routing.ExchangePerilDirect,
+		queueName,
+		routing.PauseKey,
+		pubsub.Transient,
+	)
 	if err != nil {
 		log.Fatal("Failed to declare and bind", err)
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	gs := gamelogic.NewGameState(username)
 
-	<-ctx.Done()
-
-	fmt.Println("Shutting down...")
-	time.Sleep(time.Second)
-	fmt.Println("Program exited.")
-
+	for {
+		inputs := gamelogic.GetInput()
+		if len(inputs) == 0 {
+			continue
+		}
+		switch inputs[0] {
+		case "spawn":
+			err := gs.CommandSpawn(inputs)
+			if err != nil {
+				log.Println("Error spawning: ", err)
+				break
+			}
+		case "move":
+			_, err := gs.CommandMove(inputs)
+			if err != nil {
+				log.Println("Error moving: ", err)
+				break
+			}
+		case "status":
+			gs.CommandStatus()
+		case "help":
+			gamelogic.PrintClientHelp()
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+		case "quit":
+			gamelogic.PrintQuit()
+			return
+		default:
+			fmt.Println("Unknown command")
+		}
+	}
 }
