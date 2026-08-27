@@ -16,7 +16,7 @@ func main() {
 
 	conn, err := amqp.Dial(connString)
 	if err != nil {
-		log.Fatal("Unable to connnect to rabbitmq server", err)
+		log.Fatalf("Unable to connnect to rabbitmq server: %v", err)
 	}
 	defer conn.Close()
 
@@ -31,12 +31,12 @@ func main() {
 		pubsub.SimpleQueueDurable,
 	)
 	if err != nil {
-		log.Fatal("Failed to declare and bind to game_logs queue", err)
+		log.Fatalf("Failed to declare and bind to game_logs queue: %v", err)
 	}
 
 	publishChan, err := conn.Channel()
 	if err != nil {
-		log.Fatal("Failed to create channel: ", err)
+		log.Fatalf("Failed to create channel: %v", err)
 	}
 	err = pubsub.PublishJSON(
 		publishChan,

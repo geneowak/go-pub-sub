@@ -16,7 +16,7 @@ func main() {
 
 	conn, err := amqp.Dial(connString)
 	if err != nil {
-		log.Fatal("Unable to connect to rabbitmq server: ", err)
+		log.Fatalf("Unable to connect to rabbitmq server: %v", err)
 	}
 	defer conn.Close()
 
@@ -38,7 +38,7 @@ func main() {
 		handlerPause(gs),
 	)
 	if err != nil {
-		log.Fatal("Failed to subscribe to pauses", err)
+		log.Fatalf("Failed to subscribe to pauses: %v", err)
 	}
 	// subscribe to moves
 	queueName = fmt.Sprintf("%s.%s", routing.ArmyMovesPrefix, gs.GetUsername())
@@ -51,12 +51,12 @@ func main() {
 		handlerMove(gs),
 	)
 	if err != nil {
-		log.Fatal("Failed to subscibe to moves channel", err)
+		log.Fatalf("Failed to subscibe to moves channel: %v", err)
 	}
 
 	publishChan, err := conn.Channel()
 	if err != nil {
-		log.Fatal("Failed to create channel: ", err)
+		log.Fatalf("Failed to create channel: %v", err)
 	}
 
 	for {
@@ -80,7 +80,7 @@ func main() {
 			err = pubsub.PublishJSON(
 				publishChan,
 				routing.ExchangePerilTopic,
-				routing.ArmyMovesPrefix+".*",
+				routing.ArmyMovesPrefix+"."+mv.Player.Username,
 				mv,
 			)
 			log.Println("Move published successfully")
