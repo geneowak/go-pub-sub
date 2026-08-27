@@ -28,6 +28,7 @@ func main() {
 	gs := gamelogic.NewGameState(username)
 
 	queueName := fmt.Sprintf("%s.%s", routing.PauseKey, gs.GetUsername())
+	// subscribe to pauses
 	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilDirect,
@@ -37,7 +38,25 @@ func main() {
 		handlerPause(gs),
 	)
 	if err != nil {
-		log.Fatal("Failed to declare and bind", err)
+		log.Fatal("Failed to subscribe to pauses", err)
+	}
+	// subscribe to moves
+	queueName = fmt.Sprintf("%s.%s", routing.ArmyMovesPrefix, gs.GetUsername())
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		queueName,
+		routing.ArmyMovesPrefix+".*",
+		pubsub.SimpleQueueTransient,
+		handlerMove(gs),
+	)
+	if err != nil {
+		log.Fatal("Failed to subscibe to moves channel", err)
+	}
+
+	publishChan, err := conn.Channel()
+	if err != nil {
+		log.Fatal("Failed to create channel: ", err)
 	}
 
 	for {
@@ -53,11 +72,18 @@ func main() {
 				continue
 			}
 		case "move":
-			_, err := gs.CommandMove(inputs)
+			mv, err := gs.CommandMove(inputs)
 			if err != nil {
 				log.Println("Error moving: ", err)
 				continue
 			}
+			err = pubsub.PublishJSON(
+				publishChan,
+				routing.ExchangePerilTopic,
+				routing.ArmyMovesPrefix+".*",
+				mv,
+			)
+			log.Println("Move published successfully")
 		case "status":
 			gs.CommandStatus()
 		case "help":
