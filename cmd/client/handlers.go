@@ -4,26 +4,27 @@ import (
 	"fmt"
 
 	"github.com/geneowak/go-pub-sub/internal/gamelogic"
+	"github.com/geneowak/go-pub-sub/internal/pubsub"
 	"github.com/geneowak/go-pub-sub/internal/routing"
 )
 
-func handlerPause(gs *gamelogic.GameState) func(routing.PlayingState) string {
-	return func(ps routing.PlayingState) string {
+func handlerPause(gs *gamelogic.GameState) func(routing.PlayingState) pubsub.Acktype {
+	return func(ps routing.PlayingState) pubsub.Acktype {
 		defer fmt.Print("> ")
 		gs.HandlePause(ps)
-		return "Ack"
+		return pubsub.Ack
 	}
 }
 
-func handlerMove(gs *gamelogic.GameState) func(gamelogic.ArmyMove) string {
-	return func(am gamelogic.ArmyMove) string {
+func handlerMove(gs *gamelogic.GameState) func(gamelogic.ArmyMove) pubsub.Acktype {
+	return func(am gamelogic.ArmyMove) pubsub.Acktype {
 		defer fmt.Print("> ")
 		outcome := gs.HandleMove(am)
 		switch outcome {
 		case gamelogic.MoveOutComeSafe, gamelogic.MoveOutcomeMakeWar:
-			return "Ack"
+			return pubsub.Ack
 		default:
-			return "NackDiscard"
+			return pubsub.NackDiscard
 		}
 	}
 }
