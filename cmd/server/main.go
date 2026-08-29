@@ -21,8 +21,8 @@ func main() {
 	defer conn.Close()
 
 	fmt.Println("Successfully connnected to rabbitmq server.")
-	queueName := "game_logs"
-	routingKey := "game_logs.*"
+	queueName := routing.GameLogSlug
+	routingKey := routing.GameLogSlug + ".*"
 	_, _, err = pubsub.DeclareAndBind(
 		conn,
 		routing.ExchangePerilTopic,

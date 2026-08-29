@@ -98,13 +98,16 @@ func DeclareAndBind(
 		return nil, amqp.Queue{}, err
 	}
 
+	table := make(amqp.Table)
+	// tells RabbitMQ to send failed messages to the dead letter exchange
+	table["x-dead-letter-exchange"] = "peril_dlx"
 	queue, err := channel.QueueDeclare(
 		queueName,                       // name
 		queueType == SimpleQueueDurable, // durable
 		queueType != SimpleQueueDurable, // delete when unused
 		queueType != SimpleQueueDurable, // exclusive
 		false,                           // no-wait
-		nil,                             // args
+		table,                           // args
 	)
 	if err != nil {
 		return nil, amqp.Queue{}, err

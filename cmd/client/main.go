@@ -20,6 +20,11 @@ func main() {
 	}
 	defer conn.Close()
 
+	publishChan, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("Failed to create channel: %v", err)
+	}
+
 	username, err := gamelogic.ClientWelcome()
 	if err != nil {
 		log.Fatal(err)
@@ -35,7 +40,7 @@ func main() {
 		queueName,
 		routing.PauseKey,
 		pubsub.SimpleQueueTransient,
-		handlerPause(gs),
+		handlerPause(publishChan, gs),
 	)
 	if err != nil {
 		log.Fatalf("Failed to subscribe to pauses: %v", err)
@@ -48,15 +53,22 @@ func main() {
 		queueName,
 		routing.ArmyMovesPrefix+".*",
 		pubsub.SimpleQueueTransient,
-		handlerMove(gs),
+		handlerMove(publishChan, gs),
 	)
 	if err != nil {
 		log.Fatalf("Failed to subscibe to moves channel: %v", err)
 	}
-
-	publishChan, err := conn.Channel()
+	// subscribe to war
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.WarRecognitionsPrefix,
+		routing.WarRecognitionsPrefix+".*",
+		pubsub.SimpleQueueDurable,
+		handlerWar(publishChan, gs),
+	)
 	if err != nil {
-		log.Fatalf("Failed to create channel: %v", err)
+		log.Fatalf("Failed to subscibe to war channel: %v", err)
 	}
 
 	for {
@@ -83,6 +95,9 @@ func main() {
 				routing.ArmyMovesPrefix+"."+mv.Player.Username,
 				mv,
 			)
+			if err != nil {
+				log.Println("Failed to publish message", err)
+			}
 			log.Println("Move published successfully")
 		case "status":
 			gs.CommandStatus()
