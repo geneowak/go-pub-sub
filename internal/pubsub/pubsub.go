@@ -34,7 +34,7 @@ func SubscribeJSON[T any](
 	queueName,
 	key string,
 	queueType SimpleQueueType, // an enum to represent "durable" or "transient"
-	handler func(T),
+	handler func(T) string,
 ) error {
 	ch, queue, err := DeclareAndBind(
 		conn,
@@ -60,8 +60,18 @@ func SubscribeJSON[T any](
 				log.Println("Failed to Unmarshal: ", err)
 				continue
 			}
-			handler(body)
-			msg.Ack(false)
+			ack := handler(body)
+			switch ack {
+			case "Ack":
+				msg.Ack(false)
+				log.Println("Message acknowledged")
+			case "NackRequeue":
+				msg.Nack(false, true)
+				log.Println("Message requeued")
+			case "NackDiscard":
+				msg.Nack(false, false)
+				log.Println("Message discarded")
+			}
 		}
 	}()
 
