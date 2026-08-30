@@ -97,6 +97,7 @@ func main() {
 			)
 			if err != nil {
 				log.Println("Failed to publish message", err)
+				continue
 			}
 			log.Println("Move published successfully")
 		case "status":
