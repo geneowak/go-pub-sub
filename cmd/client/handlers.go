@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/geneowak/go-pub-sub/internal/gamelogic"
 	"github.com/geneowak/go-pub-sub/internal/pubsub"
@@ -50,21 +51,53 @@ func handlerMove(ch *amqp.Channel, gs *gamelogic.GameState) func(gamelogic.ArmyM
 func handlerWar(ch *amqp.Channel, gs *gamelogic.GameState) func(gamelogic.RecognitionOfWar) pubsub.Acktype {
 	return func(rw gamelogic.RecognitionOfWar) pubsub.Acktype {
 		defer fmt.Print("> ")
-		outcome, _, _ := gs.HandleWar(rw)
+		outcome, winner, loser := gs.HandleWar(rw)
 		switch outcome {
 		case gamelogic.WarOutcomeNotInvolved:
 			return pubsub.NackRequeue
 		case gamelogic.WarOutcomeNoUnits:
 			return pubsub.NackDiscard
 		case gamelogic.WarOutcomeOpponentWon:
-			return pubsub.Ack
+			log := fmt.Sprintf("%s won against %s", winner, loser)
+			gamelog := routing.GameLog{
+				CurrentTime: time.Now().UTC(),
+				Message:     log,
+				Username:    gs.GetUsername(),
+			}
+			return publisGameLog(ch, rw, gamelog)
 		case gamelogic.WarOutcomeYouWon:
-			return pubsub.Ack
+			log := fmt.Sprintf("%s won against %s", winner, loser)
+			gamelog := routing.GameLog{
+				CurrentTime: time.Now().UTC(),
+				Message:     log,
+				Username:    gs.GetUsername(),
+			}
+			return publisGameLog(ch, rw, gamelog)
 		case gamelogic.WarOutcomeDraw:
-			return pubsub.Ack
+			log := fmt.Sprintf("A war between %s and %s resulted in a draw", winner, loser)
+			gamelog := routing.GameLog{
+				CurrentTime: time.Now().UTC(),
+				Message:     log,
+				Username:    gs.GetUsername(),
+			}
+			return publisGameLog(ch, rw, gamelog)
 		default:
 			fmt.Println("Error: war outcome not determinable.")
 			return pubsub.NackDiscard
 		}
 	}
+}
+
+func publisGameLog(ch *amqp.Channel, rw gamelogic.RecognitionOfWar, gl routing.GameLog) pubsub.Acktype {
+	key := routing.GameLogSlug + "." + rw.Attacker.Username
+	err := pubsub.PublishGob(
+		ch,
+		routing.ExchangePerilTopic,
+		key,
+		gl,
+	)
+	if err != nil {
+		return pubsub.NackRequeue
+	}
+	return pubsub.Ack
 }
