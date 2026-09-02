@@ -6,9 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"log"
 
-	"github.com/geneowak/go-pub-sub/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -72,101 +70,6 @@ func PublishGob[T any](
 			Body:        buffer.Bytes(),
 		},
 	)
-}
-
-func SubscribeJSON[T any](
-	conn *amqp.Connection,
-	exchange,
-	queueName,
-	key string,
-	queueType SimpleQueueType, // an enum to represent "durable" or "transient"
-	handler func(T) Acktype,
-) error {
-	ch, queue, err := DeclareAndBind(
-		conn,
-		exchange,
-		queueName,
-		key,
-		queueType,
-	)
-	if err != nil {
-		return fmt.Errorf("Failed to declare and bind: %w", err)
-	}
-
-	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
-	if err != nil {
-		return fmt.Errorf("Failed to setup consumer: %w", err)
-	}
-	go func() {
-		defer ch.Close()
-		for msg := range msgs {
-			var body T
-			err := json.Unmarshal(msg.Body, &body)
-			if err != nil {
-				log.Println("Failed to Unmarshal: ", err)
-				continue
-			}
-			ack := handler(body)
-			switch ack {
-			case Ack:
-				msg.Ack(false)
-			case NackRequeue:
-				msg.Nack(false, true)
-			case NackDiscard:
-				msg.Nack(false, false)
-			}
-		}
-	}()
-
-	return nil
-}
-
-func SubscribeGob[T any](
-	conn *amqp.Connection,
-	exchange,
-	queueName,
-	key string,
-	queueType SimpleQueueType, // an enum to represent "durable" or "transient"
-	handler func(T) Acktype,
-	unmarshaller func([]byte) (T, error),
-) error {
-	ch, queue, err := DeclareAndBind(
-		conn,
-		exchange,
-		routing.GameLogSlug,
-		routing.GameLogSlug+".*",
-		queueType,
-	)
-	if err != nil {
-		return fmt.Errorf("Failed to declare and bind: %w", err)
-	}
-
-	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
-	if err != nil {
-		return fmt.Errorf("Failed to setup consumer: %w", err)
-	}
-	defer fmt.Println("> ")
-	go func() {
-		defer ch.Close()
-		for msg := range msgs {
-			body, err := unmarshaller(msg.Body)
-			if err != nil {
-				log.Println("Failed to Unmarshal: ", err)
-				continue
-			}
-			ack := handler(body)
-			switch ack {
-			case Ack:
-				msg.Ack(false)
-			case NackRequeue:
-				msg.Nack(false, true)
-			case NackDiscard:
-				msg.Nack(false, false)
-			}
-		}
-	}()
-
-	return nil
 }
 
 func DeclareAndBind(
