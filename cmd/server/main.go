@@ -21,13 +21,13 @@ func main() {
 	defer conn.Close()
 
 	fmt.Println("Successfully connnected to rabbitmq server.")
-	queueName := routing.GameLogSlug
-	routingKey := routing.GameLogSlug + ".*"
+	logQueueName := routing.GameLogSlug
+	logRoutingKey := routing.GameLogSlug + ".*"
 	_, _, err = pubsub.DeclareAndBind(
 		conn,
 		routing.ExchangePerilTopic,
-		queueName,
-		routingKey,
+		logQueueName,
+		logRoutingKey,
 		pubsub.SimpleQueueDurable,
 	)
 	if err != nil {
@@ -38,18 +38,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create channel: %v", err)
 	}
-	err = pubsub.PublishJSON(
-		publishChan,
-		routing.ExchangePerilDirect,
-		routing.PauseKey,
-		routing.PlayingState{IsPaused: true},
-	)
 
-	if err != nil {
-		log.Println("Failed to publish: %w", err)
-	}
-
+	// subscribe to game logs
+	err = pubsub.SubscribeGob(conn, routing.ExchangePerilTopic, logQueueName, logRoutingKey, pubsub.SimpleQueueDurable, handlerLog(publishChan))
 	gamelogic.PrintServerHelp()
+	if err != nil {
+		log.Fatalf("Failed to subscribe to game logs: %v", err)
+	}
 
 	for {
 		inputs := gamelogic.GetInput()
