@@ -18,11 +18,6 @@ func SubscribeJSON[T any](
 	queueType SimpleQueueType, // an enum to represent "durable" or "transient"
 	handler func(T) Acktype,
 ) error {
-	jsonUnmarshaller := func(data []byte) (T, error) {
-		var body T
-		err := json.Unmarshal(data, &body)
-		return body, err
-	}
 	return subscribe(
 		conn,
 		exchange,
