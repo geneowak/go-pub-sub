@@ -11,7 +11,10 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func handlerPause(ch *amqp.Channel, gs *gamelogic.GameState) func(routing.PlayingState) pubsub.Acktype {
+func handlerPause(
+	ch *amqp.Channel,
+	gs *gamelogic.GameState,
+) func(routing.PlayingState) pubsub.Acktype {
 	return func(ps routing.PlayingState) pubsub.Acktype {
 		defer fmt.Print("> ")
 		gs.HandlePause(ps)
@@ -19,7 +22,10 @@ func handlerPause(ch *amqp.Channel, gs *gamelogic.GameState) func(routing.Playin
 	}
 }
 
-func handlerMove(ch *amqp.Channel, gs *gamelogic.GameState) func(gamelogic.ArmyMove) pubsub.Acktype {
+func handlerMove(
+	ch *amqp.Channel,
+	gs *gamelogic.GameState,
+) func(gamelogic.ArmyMove) pubsub.Acktype {
 	return func(am gamelogic.ArmyMove) pubsub.Acktype {
 		defer fmt.Print("> ")
 		outcome := gs.HandleMove(am)
@@ -48,7 +54,10 @@ func handlerMove(ch *amqp.Channel, gs *gamelogic.GameState) func(gamelogic.ArmyM
 	}
 }
 
-func handlerWar(ch *amqp.Channel, gs *gamelogic.GameState) func(gamelogic.RecognitionOfWar) pubsub.Acktype {
+func handlerWar(
+	ch *amqp.Channel,
+	gs *gamelogic.GameState,
+) func(gamelogic.RecognitionOfWar) pubsub.Acktype {
 	return func(rw gamelogic.RecognitionOfWar) pubsub.Acktype {
 		defer fmt.Print("> ")
 		outcome, winner, loser := gs.HandleWar(rw)
@@ -88,7 +97,11 @@ func handlerWar(ch *amqp.Channel, gs *gamelogic.GameState) func(gamelogic.Recogn
 	}
 }
 
-func publisGameLog(ch *amqp.Channel, rw gamelogic.RecognitionOfWar, gl routing.GameLog) pubsub.Acktype {
+func publisGameLog(
+	ch *amqp.Channel,
+	rw gamelogic.RecognitionOfWar,
+	gl routing.GameLog,
+) pubsub.Acktype {
 	key := routing.GameLogSlug + "." + rw.Attacker.Username
 	err := pubsub.PublishGob(
 		ch,
