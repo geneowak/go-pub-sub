@@ -21,24 +21,14 @@ func main() {
 	defer conn.Close()
 
 	fmt.Println("Successfully connnected to rabbitmq server.")
-	logQueueName := routing.GameLogSlug
-	logRoutingKey := routing.GameLogSlug + ".*"
-	_, _, err = pubsub.DeclareAndBind(
-		conn,
-		routing.ExchangePerilTopic,
-		logQueueName,
-		logRoutingKey,
-		pubsub.SimpleQueueDurable,
-	)
-	if err != nil {
-		log.Fatalf("Failed to declare and bind to game_logs queue: %v", err)
-	}
 
 	publishChan, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("Failed to create channel: %v", err)
 	}
 
+	logQueueName := routing.GameLogSlug
+	logRoutingKey := routing.GameLogSlug + ".*"
 	// subscribe to game logs
 	err = pubsub.SubscribeGob(
 		conn,
