@@ -23,7 +23,19 @@ func SubscribeJSON[T any](
 		err := json.Unmarshal(data, &body)
 		return body, err
 	}
-	return subscribe(conn, exchange, queueName, key, queueType, handler, jsonUnmarshaller)
+	return subscribe(
+		conn,
+		exchange,
+		queueName,
+		key,
+		queueType,
+		handler,
+		func(data []byte) (T, error) {
+			var body T
+			err := json.Unmarshal(data, &body)
+			return body, err
+		},
+	)
 }
 
 func SubscribeGob[T any](
@@ -34,14 +46,21 @@ func SubscribeGob[T any](
 	queueType SimpleQueueType, // an enum to represent "durable" or "transient"
 	handler func(T) Acktype,
 ) error {
-	gobUnmarshaller := func(data []byte) (T, error) {
-		var body T
-		buffer := bytes.NewBuffer(data)
-		decoder := gob.NewDecoder(buffer)
-		err := decoder.Decode(&body)
-		return body, err
-	}
-	return subscribe(conn, exchange, queueName, key, queueType, handler, gobUnmarshaller)
+	return subscribe(
+		conn,
+		exchange,
+		queueName,
+		key,
+		queueType,
+		handler,
+		func(data []byte) (T, error) {
+			var body T
+			buffer := bytes.NewBuffer(data)
+			decoder := gob.NewDecoder(buffer)
+			err := decoder.Decode(&body)
+			return body, err
+		},
+	)
 }
 
 func subscribe[T any](
@@ -74,11 +93,10 @@ func subscribe[T any](
 		for msg := range msgs {
 			body, err := unmarshaller(msg.Body)
 			if err != nil {
-				log.Println("Failed to Unmarshal: ", err)
+				log.Println("Failed to Unmarshal message: ", err)
 				continue
 			}
-			ack := handler(body)
-			switch ack {
+			switch handler(body) {
 			case Ack:
 				msg.Ack(false)
 			case NackRequeue:

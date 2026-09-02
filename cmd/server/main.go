@@ -40,10 +40,17 @@ func main() {
 	}
 
 	// subscribe to game logs
-	err = pubsub.SubscribeGob(conn, routing.ExchangePerilTopic, logQueueName, logRoutingKey, pubsub.SimpleQueueDurable, handlerLog(publishChan))
+	err = pubsub.SubscribeGob(
+		conn,
+		routing.ExchangePerilTopic,
+		logQueueName,
+		logRoutingKey,
+		pubsub.SimpleQueueDurable,
+		handlerLog(),
+	)
 	gamelogic.PrintServerHelp()
 	if err != nil {
-		log.Fatalf("Failed to subscribe to game logs: %v", err)
+		log.Fatalf("Failed to start consuming logs: %v", err)
 	}
 
 	for {
