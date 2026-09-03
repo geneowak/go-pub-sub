@@ -78,6 +78,12 @@ func subscribe[T any](
 		return fmt.Errorf("Failed to declare and bind: %w", err)
 	}
 
+	// set prefetch limit to stop consumers from hoarding all the messages
+	err = ch.Qos(10, 0, true)
+	if err != nil {
+		return fmt.Errorf("Failed to setup prefetch limits: %w", err)
+	}
+
 	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("Failed to setup consumer: %w", err)
