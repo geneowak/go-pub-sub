@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/geneowak/go-pub-sub/internal/gamelogic"
 	"github.com/geneowak/go-pub-sub/internal/pubsub"
@@ -120,7 +121,11 @@ func main() {
 					publishChan,
 					routing.ExchangePerilTopic,
 					routing.GameLogSlug+"."+gs.GetUsername(),
-					gamelogic.GetMaliciousLog(),
+					routing.GameLog{
+						CurrentTime: time.Now().UTC(),
+						Message:     gamelogic.GetMaliciousLog(),
+						Username:    gs.GetUsername(),
+					},
 				)
 				if err != nil {
 					fmt.Println("Failed to publish malicious log")
